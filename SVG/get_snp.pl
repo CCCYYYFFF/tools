@@ -12,33 +12,45 @@ GetOptions(
 ) or &USAGE;
 
 &USAGE unless ($in);
-$tag||="T";
-$note||="p";
+$tag||="p";
+$note||="T";
 $in = abs_path($in);
-open(IN,"$in");
-open(OUT,">$in.bak");
+my @name = `find $in -name "*.svg"`;
+chomp(@name);
 
-while(<IN>){
-	if($_ =~/circle.*cx="(\d+)"/ && $tag eq "e"){
-		print OUT "<ellipse cx=\"$1\" cy=\"360\" rx=\"40\" ry=\"400\" style=\"fill:blue;fill-opacity:0;stroke-opacity:1;stroke:red;stroke-width:4\" />\n";
-		next;
-	}elsif($_ =~/chr\d+,/ && $note eq "F"){
-		next;
+foreach my $x (@name){
+	open(IN,"$x");
+	open(OUT,">$x.bak");
+	my ($old,$pos);
+	while(<IN>){
+		if($_ =~/circle.*cx="(\d+)"/){
+			$old = $_;
+			$pos = $1;
+			#print OUT "<ellipse cx=\"$1\" cy=\"360\" rx=\"40\" ry=\"400\" style=\"fill:blue;fill-opacity:0;stroke-opacity:1;stroke:red;stroke-width:4\" />\n";
+			next;
+		}elsif($_ =~/chr\d+,\d+,(\w+),(\w+),/){
+			if(length($1)==1 && length($2)==1 && $tag eq "e"){
+				print OUT "<ellipse cx=\"$pos\" cy=\"360\" rx=\"40\" ry=\"400\" style=\"fill:blue;fill-opacity:0;stroke-opacity:1;stroke:red;stroke-width:4\" />\n";
+			}else{
+				print OUT "$old";
+			}
+			if($note eq "F"){
+				next;
+			}
+		}
+		print OUT $_;
 	}
-	print OUT $_;
+	close(IN);
+	close(OUT);
+	`mv $x $x.old`;
+	`mv $x.bak $x`;
 }
-
-close(IN);
-close(OUT);
-
-`mv $in $in.old`;
-`mv $in.bak $in`;
 
 sub USAGE {
  my $usage = <<"USAGE";
 
 USAGE:
- -in input SVG file 
+ -in input file dir
  -tag point(p) or ellipse(e)
  -note have note(T) or not(F)
 USAGE
